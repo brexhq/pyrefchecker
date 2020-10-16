@@ -108,7 +108,8 @@ def run(
     show_successes: bool,
 ) -> bool:
     """
-    Check all paths, using all available processors.
+    Check all provided paths, using all available processors.
+    Echo warnings (and optionally successes) on stdout.
     Return True if no files had any warnings.
     """
     success = True
@@ -123,6 +124,7 @@ def run(
                 except timeout_decorator.TimeoutError as e:
                     click.echo(f"🚩 {infile}: Timed out")
                 except Exception as e:
+                    # Exit early if any files could not be processed
                     for future in futures:
                         future.cancel()
                     raise Exception(f"Error processing {infile}") from e
@@ -141,6 +143,8 @@ def run(
                     if show_successes and not warnings:
                         click.echo(f"✅ {infile}")
         except KeyboardInterrupt:
+            # Without this, ctrl-c causes the process to hang waiting
+            # for all unscheduled tasks to complete.
             for future in futures:
                 future.cancel()
             click.echo(f"🛑 Interrupted", err=True)
