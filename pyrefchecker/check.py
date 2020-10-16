@@ -19,7 +19,7 @@ class BaseRefWarning(BaseWarning):
 
 @dataclass(frozen=True)
 class RefWarning(BaseRefWarning):
-    """ A warning of a potentialyl undefined reference at a specific location """
+    """ A warning of a potentially undefined reference at a specific location """
 
     line: int
     column: int
