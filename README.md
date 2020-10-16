@@ -92,7 +92,7 @@ print(a)
 ```
 
 However, this is a difficult problem. Since pyrefchecker does not check semantics, it does produce 'false positives'. Often, though,
-the false positives are pretty weird code anyway. For example, it will warn about this:
+the false positives are pretty weird code anyway. For example, it will warn about this, unless you include a `ref: ignore` comment:
 
 
 ```py
@@ -100,7 +100,7 @@ if True:
     a = "Hello!"
 
 if True:
-    print(a) 
+    print(a)  # ref: ignore
 ```
 
 ## Library usage
