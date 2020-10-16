@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from typing import List, Optional, Set, Union
+from typing import Iterator, List, Optional, Set, Union
 
 import libcst as cst
 import libcst.metadata as meta
@@ -51,7 +51,7 @@ def find_qualified_name_for_non_import(
 
 
 @contextmanager
-def monkeypatch_nameutil() -> None:
+def monkeypatch_nameutil() -> Iterator[None]:
     """ Patch _NameUtil so that it can handle BlockScopes """
 
     prop = "find_qualified_name_for_non_import"

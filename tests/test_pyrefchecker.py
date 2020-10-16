@@ -1,12 +1,6 @@
 import pytest
 
-from pyrefchecker import (
-    ImportStarWarning,
-    NoLocationRefWarning,
-    RefWarning,
-    check,
-    monkeypatch_nameutil,
-)
+from pyrefchecker import ImportStarWarning, NoLocationRefWarning, RefWarning, check
 
 
 def test_if_in_else() -> None:
