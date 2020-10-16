@@ -1,0 +1,33 @@
+# Compiled stuff
+*.pyc
+__pycache__
+
+# Setuptools stuff
+/dist/
+build
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+# Other test stuff
+.coverage
+.pytest_cache
+.eggs
+.tox
+.mypy_cache
+
+# IDE stuff
+.vscode
+
+# Credentials
+looker.ini
+
+# Local dev stuff
+*.dot
+*.pdf
+.python-version
+sample.py
+.DS_Store
+.venv
+.env
+.lookerlineage.cache.yml
