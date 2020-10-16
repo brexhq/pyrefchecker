@@ -51,7 +51,8 @@ for _ in range(0):
 print(a)
 ```
 
-However, this is a difficult problem, so this tool does produce false positives. For example, it will warn about this:
+However, this is a difficult problem. Since pyrefchecker does not check semantics, it does produce 'false positives'. Often, though,
+the false positives are pretty weird code anyway. For example, it will warn about this:
 
 
 ```
