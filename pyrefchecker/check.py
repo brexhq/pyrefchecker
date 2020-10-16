@@ -22,7 +22,7 @@ class RefWarning(BaseRefWarning):
     reference: str
 
     def __str__(self) -> str:
-        return f"Warning on line {self.line:2d}, column {self.column:2d}: Name reference `{self.reference}` may not be defined."
+        return f"Warning on line {self.line:2d}, column {self.column:2d}: reference to potentially undefined `{self.reference}`"
 
 
 @dataclass(frozen=True)
@@ -32,7 +32,7 @@ class NoLocationRefWarning(BaseRefWarning):
     reference: str
 
     def __str__(self) -> str:
-        return f"Warning: Name reference `{self.reference}` is not defined."
+        return f"Warning: reference to potentially undefined `{self.reference}`"
 
 
 @dataclass(frozen=True)
