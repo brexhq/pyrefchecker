@@ -14,14 +14,55 @@ pip install .
 ## Usage
 
 ```
-pyrefchecker **.py
+pyrefchecker .
 ```
 
-Pyrefchecker returns an exit code of 0 if it succeeds, and nonzero otherwise.
+Pyrefchecker checks all files and recursively checks all directories. It returns an exit code of 0 if no files have problems, and 1 otherwise.
+Files containing `import *` statements cannot be checked, so they are ignored by default. This can be changed with `--disallow-import-star`.
 
 ## Configuration
 
-See `pyrefchecker --help` for configuration options. Options can also be configured in pyproject.toml.
+```
+> poetry run pyrefchecker --help
+
+Usage: pyrefchecker [OPTIONS] [PATHS]...
+
+  Check python files for potentially undefined references.
+
+  Example:
+
+      pyrefchecker .
+
+Options:
+  --show-successes / --hide-successes
+                                  When set, show checks for good files
+                                  [default: (hide)]
+
+  --timeout INTEGER               Maximum processing time for a single file
+                                  [default: 5]
+
+  --allow-import-star / --disallow-import-star
+                                  Whether or not to consider `import *` a
+                                  failure  [default: (allowed)]
+
+  --exclude REGEX                 Regex for paths to exclude  [default: (\.egg
+                                  s|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv
+                                  |\.svn|_build|buck-out|build|dist)]
+
+  --include REGEX                 Regex for paths to include  [default:
+                                  \.pyi?$]
+
+  --help                          Show this message and exit.
+```
+
+Commandline options can also be configured in _pyproject.toml_ under `tool.pyrefchecker`. For example
+
+```
+[tool.pyrefchecker]
+allow_import_star = False
+exclude = "_pb2"
+
+```
 
 ## Examples
 
