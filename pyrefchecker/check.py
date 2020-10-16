@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Container, Dict, List, Set, Union, cast
+from typing import Container, Dict, List, Set, cast
 
 import libcst as cst
 import libcst.metadata as meta
@@ -9,7 +9,11 @@ from .ignore_comment_provider import IgnoreCommentProvider
 from .import_star_provider import ImportStarProvider
 
 
-class BaseRefWarning:
+class BaseWarning:
+    pass
+
+
+class BaseRefWarning(BaseWarning):
     pass
 
 
@@ -36,14 +40,12 @@ class NoLocationRefWarning(BaseRefWarning):
 
 
 @dataclass(frozen=True)
-class ImportStarWarning:
+class ImportStarWarning(BaseWarning):
     """ A warning of the precense of import * """
 
     def __str__(self) -> str:
         return f"Unable to check file, import * detected"
 
-
-Warnings = Union[BaseRefWarning, ImportStarWarning]
 
 EXCEPTIONS = {"__file__", "__name__", "__doc__", "__package__"}
 
@@ -88,10 +90,10 @@ def get_metadata(code: str) -> Metadata:
     )
 
 
-def check(code: str) -> List[Warnings]:
+def check(code: str) -> List[BaseWarning]:
     """ Return a list of warnings related to some Python code """
 
-    warnings: List[Warnings] = []
+    warnings: List[BaseWarning] = []
 
     metadata = get_metadata(code)
 
@@ -102,7 +104,6 @@ def check(code: str) -> List[Warnings]:
         if not scope:
             continue
         for access in scope.accesses:
-
             if len(access.referents) == 0:
                 node = access.node
                 if node.value not in EXCEPTIONS:

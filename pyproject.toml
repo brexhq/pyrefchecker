@@ -9,7 +9,7 @@ readme = "README.md"
 include = ["pyrefchecker/py.typed"]
 
 [tool.poetry.scripts]
-pyrefchecker = "pyrefchecker.bin:main"
+pyrefchecker = "pyrefchecker.bin.bin:main"
 
 [tool.isort]
 profile = "black"

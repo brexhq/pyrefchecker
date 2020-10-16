@@ -7,6 +7,8 @@ T = TypeVar("T")
 
 
 class PyProjectTOML:
+    """ Manages loading config out of a section of a pyproject.toml file """
+
     def __init__(self, key: str):
         self.key = key
         self._data: Dict[str, Any] = {}
