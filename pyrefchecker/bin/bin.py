@@ -1,5 +1,6 @@
 import re
 import sys
+import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable, List, Optional, Union
@@ -118,11 +119,15 @@ def run(
                     warnings = future.result()
                 except timeout_decorator.TimeoutError as e:
                     click.echo(f"🚩 {infile}: Timed out")
-                except Exception as e:
+                except Exception:
                     # Exit early if any files could not be processed
                     for future in futures:
                         future.cancel()
-                    raise Exception(f"Error processing {infile}") from e
+                    traceback.print_exc(file=sys.stderr)
+                    click.echo(
+                        f"\n❌ {infile}: Failed to process due to the above exception"
+                    )
+                    return False
                 else:
                     for warning in warnings:
                         # TODO: Maybe do this without isinstance
