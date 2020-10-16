@@ -103,3 +103,19 @@ if True:
 if True:
     print(a) 
 ```
+
+## Library usage
+
+You can also use pyrefchecker as a library:
+
+```py
+import pyrefchecker
+
+print(pyrefchecker.check("""
+if True:
+    a = "hello"
+print(a)
+"""))
+
+# [RefWarning(line=4, column=6, reference='a')]
+```
