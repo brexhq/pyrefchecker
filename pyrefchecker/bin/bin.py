@@ -32,20 +32,23 @@ DEFAULT_EXCLUDE = r"(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|\.svn|_bu
     nargs=-1,
 )
 @click.option(
-    "--show-successes/--no-show-successes",
+    "--show-successes/--hide-successes",
     default=defaults.get("show_successes", False),
-    help="When set, show checks for good files (default: show)",
+    help="When set, show checks for good files",
+    show_default="show" if defaults.get("show_successes", False) else "hide",
 )
 @click.option(
     "--timeout",
     type=int,
     default=defaults.get("timeout", 5),
-    help="Maximum processing time for a single file (default: 5)",
+    help="Maximum processing time for a single file",
+    show_default=True,
 )
 @click.option(
     "--allow-import-star/--disallow-import-star",
     default=defaults.get("allow_import_star", True),
-    help="Whether or not to consider `import *` a failure (default: allowed)",
+    help="Whether or not to consider `import *` a failure",
+    show_default="allowed" if defaults.get("allow_import_star", True) else "disallowed",
 )
 @click.option(
     "--exclude",
@@ -55,12 +58,14 @@ DEFAULT_EXCLUDE = r"(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|\.svn|_bu
         DEFAULT_EXCLUDE,
     ),
     help="Regex for paths to exclude",
+    show_default=True,
 )
 @click.option(
     "--include",
     type=Regex(),
     default=defaults.get("include", r"\.pyi?$"),
     help="Regex for paths to include",
+    show_default=True,
 )
 def main(
     paths: Iterable[Union[str, Path]],
@@ -110,29 +115,36 @@ def run(
 
     with ProcessPoolExecutor() as e:
         futures = {e.submit(check_file, x, timeout_seconds=timeout): x for x in paths}
-        for future in as_completed(futures.keys()):
-            infile = futures[future]
-
-            try:
-                warnings = future.result()
-            except timeout_decorator.TimeoutError as e:
-                click.echo(f"🚩 {infile}: Timed out")
-            except Exception as e:
-                raise Exception(f"Error processing {infile}") from e
-            else:
-                for warning in warnings:
-                    # TODO: Maybe do this without isinstance
-                    if isinstance(warning, BaseRefWarning):
-                        success = False
-                        click.echo(f"⚠️  {infile}: {warning}")
-                    elif isinstance(warning, ImportStarWarning):
-                        emoji = "❔"
-                        if not allow_import_star:
+        try:
+            for future in as_completed(futures.keys()):
+                infile = futures[future]
+                try:
+                    warnings = future.result()
+                except timeout_decorator.TimeoutError as e:
+                    click.echo(f"🚩 {infile}: Timed out")
+                except Exception as e:
+                    for future in futures:
+                        future.cancel()
+                    raise Exception(f"Error processing {infile}") from e
+                else:
+                    for warning in warnings:
+                        # TODO: Maybe do this without isinstance
+                        if isinstance(warning, BaseRefWarning):
                             success = False
-                            emoji = "⚠️"
-                        click.echo(f"{emoji} {infile}: {warning}")
-                if show_successes and not warnings:
-                    click.echo(f"✅ {infile}")
+                            click.echo(f"⚠️  {infile}: {warning}")
+                        elif isinstance(warning, ImportStarWarning):
+                            emoji = "❔"
+                            if not allow_import_star:
+                                success = False
+                                emoji = "⚠️"
+                            click.echo(f"{emoji} {infile}: {warning}")
+                    if show_successes and not warnings:
+                        click.echo(f"✅ {infile}")
+        except KeyboardInterrupt:
+            for future in futures:
+                future.cancel()
+            click.echo(f"🛑 Interrupted", err=True)
+            return False
 
     return success
 
