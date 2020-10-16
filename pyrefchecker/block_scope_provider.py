@@ -51,7 +51,7 @@ def find_qualified_name_for_non_import(
 
 def monkeypatch_nameutil() -> None:
     """ Patch _NameUtil so that it can handle BlockScopes """
-    # TODO: write a test which fails if this isn't called
+
     setattr(
         sp._NameUtil,
         "find_qualified_name_for_non_import",

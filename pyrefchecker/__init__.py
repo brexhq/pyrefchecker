@@ -1,3 +1,4 @@
+from .block_scope_provider import monkeypatch_nameutil
 from .check import (
     BaseRefWarning,
     BaseWarning,

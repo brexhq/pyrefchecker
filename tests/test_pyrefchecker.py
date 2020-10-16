@@ -1,10 +1,11 @@
 import pytest
 
-from pyrefchecker.check import (
+from pyrefchecker import (
     ImportStarWarning,
     NoLocationRefWarning,
     RefWarning,
     check,
+    monkeypatch_nameutil,
 )
 
 
@@ -219,3 +220,18 @@ print(a, ''' # ref: ignore
 ''')
 """
     assert check(code) == [RefWarning(line=3, column=6, reference="a")]
+
+
+def test_monkeypatch() -> None:
+    code = """
+for a in []:
+    a = lambda: None
+    a()
+"""
+    # This fails without the monkey patch...
+    with pytest.raises(Exception, match=r"Unexpected Scope"):
+        check(code)
+
+    # And succeeds with it
+    monkeypatch_nameutil()
+    assert not check(code)
