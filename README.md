@@ -68,14 +68,14 @@ exclude = "_pb2"
 
 Here are some examples, which tools like mypy, pylint and pyflakes do not catch:
 
-```
+```py
 if False:
     a = "Hello!"
 
 print(a)
 ```
 
-```
+```py
 try:
     assert False
     a = "Hello!"
@@ -85,7 +85,7 @@ except Exception:
 print(a)
 ```
 
-```
+```py
 for _ in range(0):
     a = "Hello!"
 
@@ -96,7 +96,7 @@ However, this is a difficult problem. Since pyrefchecker does not check semantic
 the false positives are pretty weird code anyway. For example, it will warn about this:
 
 
-```
+```py
 if True:
     a = "Hello!"
 
