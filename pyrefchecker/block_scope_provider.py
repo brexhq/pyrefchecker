@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import List, Optional, Set, Union
 
 import libcst as cst
@@ -49,14 +50,21 @@ def find_qualified_name_for_non_import(
     return {sp.QualifiedName(".".join(parts), sp.QualifiedNameSource.LOCAL)}
 
 
+@contextmanager
 def monkeypatch_nameutil() -> None:
     """ Patch _NameUtil so that it can handle BlockScopes """
 
+    prop = "find_qualified_name_for_non_import"
+    prev = getattr(sp._NameUtil, prop, None)
     setattr(
         sp._NameUtil,
-        "find_qualified_name_for_non_import",
+        prop,
         find_qualified_name_for_non_import,
     )
+    try:
+        yield
+    finally:
+        setattr(sp._NameUtil, prop, prev)
 
 
 EXIT_NODES = (cst.Raise, cst.Return, cst.Continue, cst.Break)

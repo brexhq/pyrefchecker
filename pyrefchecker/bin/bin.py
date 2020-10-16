@@ -1,8 +1,3 @@
-from ..block_scope_provider import monkeypatch_nameutil
-
-# XXX: This is kind of ugly
-monkeypatch_nameutil()
-
 import re
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed

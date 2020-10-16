@@ -228,10 +228,5 @@ for a in []:
     a = lambda: None
     a()
 """
-    # This fails without the monkey patch...
-    with pytest.raises(Exception, match=r"Unexpected Scope"):
-        check(code)
-
-    # And succeeds with it
-    monkeypatch_nameutil()
+    # This test fails when the nameutil monkeypatch is not used
     assert not check(code)

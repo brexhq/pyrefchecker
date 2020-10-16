@@ -4,7 +4,7 @@ from typing import Container, Dict, List, Set, cast
 import libcst as cst
 import libcst.metadata as meta
 
-from .block_scope_provider import BlockScopeProvider
+from .block_scope_provider import BlockScopeProvider, monkeypatch_nameutil
 from .ignore_comment_provider import IgnoreCommentProvider
 from .import_star_provider import ImportStarProvider
 
@@ -90,6 +90,7 @@ def get_metadata(code: str) -> Metadata:
     )
 
 
+@monkeypatch_nameutil()
 def check(code: str) -> List[BaseWarning]:
     """ Return a list of warnings related to some Python code """
 
