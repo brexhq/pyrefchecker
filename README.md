@@ -61,7 +61,6 @@ Commandline options can also be configured in _pyproject.toml_ under `tool.pyref
 [tool.pyrefchecker]
 allow_import_star = False
 exclude = "_pb2"
-
 ```
 
 ## Examples
