@@ -1,12 +1,12 @@
 import re
 from pathlib import Path
-from typing import Iterable, Optional, Set, Union
+from typing import Iterable, Optional, Set, Union, Collection
 
 
 def find_files(
     paths: Iterable[Union[str, Path]],
     include: Optional[re.Pattern],
-    exclude: Optional[re.Pattern],
+    excludes: Optional[Collection[re.Pattern]],
 ) -> Set[Path]:
     """
     Recurse any directories specified in 'paths', and include any files specified.
@@ -25,6 +25,6 @@ def find_files(
         elif p.is_file():
             final_paths.add(Path(p))
 
-    if exclude:
+    for exclude in excludes or []:
         final_paths = {x for x in final_paths if not exclude.search(str(x))}
     return final_paths

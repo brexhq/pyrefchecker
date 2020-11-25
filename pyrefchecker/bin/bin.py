@@ -47,21 +47,26 @@ DEFAULT_EXCLUDE = r"(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|\.svn|_bu
     show_default="allowed" if defaults.get("allow_import_star", True) else "disallowed",
 )
 @click.option(
-    "--exclude",
-    type=Regex(),
-    default=defaults.get(
-        "exclude",
-        DEFAULT_EXCLUDE,
-    ),
-    help="Regex for paths to exclude",
-    show_default=True,
-)
-@click.option(
     "--include",
     type=Regex(),
     default=defaults.get("include", r"\.pyi?$"),
     help="Regex for paths to include",
     show_default=True,
+)
+@click.option(
+    "--exclude",
+    type=Regex(),
+    default=defaults.get("exclude", DEFAULT_EXCLUDE),
+    help="Regex for paths to exclude. When specified, the default is replaced.",
+    show_default=True,
+)
+@click.option(
+    "--extra-excludes",
+    type=Regex(),
+    multiple=True,
+    default=defaults.get("extra_excludes", []),
+    help="Additional regexes for paths to exclude",
+    show_default=False,
 )
 def main(
     paths: Iterable[Union[str, Path]],
@@ -70,6 +75,7 @@ def main(
     allow_import_star: bool,
     include: Optional[re.Pattern],
     exclude: Optional[re.Pattern],
+    extra_excludes: List[re.Pattern],
 ) -> None:
     """
     Check python files for potentially undefined references.
@@ -80,7 +86,8 @@ def main(
 
     """
 
-    paths = find_files(paths, include, exclude)
+    excludes = [x for x in [exclude, *extra_excludes] if x is not None]
+    paths = find_files(paths, include, excludes)
 
     if not paths:
         raise click.UsageError("No files specified")
@@ -118,7 +125,7 @@ def run(
                 try:
                     warnings = future.result()
                 except timeout_decorator.TimeoutError as e:
-                    click.echo(f"🚩 {infile}: Timed out")
+                    click.echo(f"⏰ {infile}: Timed out")
                 except Exception:
                     # Exit early if any files could not be processed
                     for future in futures:
