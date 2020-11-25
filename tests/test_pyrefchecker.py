@@ -224,3 +224,98 @@ for a in []:
 """
     # This test fails when the nameutil monkeypatch is not used
     assert not check(code)
+
+
+def test_type_complaints() -> None:
+    code = """
+from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING as is_type_checking
+import typing
+import typing as meep
+
+if TYPE_CHECKING:
+    from g1 import Good1
+if typing.TYPE_CHECKING:
+    from g2 import Good2
+if is_type_checking:
+    from g3 import Good3
+if meep.TYPE_CHECKING == True:
+    from g4 import Good4
+if meep.TYPE_CHECKING == False:
+    from baz import Bad1
+
+a: Good1
+b: Good2
+c: Good3
+d: Good4
+d: Bad1
+e: Bad2
+"""
+    print(check(code))
+    assert check(code) == [
+        RefWarning(line=22, column=3, reference="Bad1"),
+        RefWarning(line=23, column=3, reference="Bad2"),
+    ]
+
+
+def test_noreturn() -> None:
+    code = """
+from typing import NoReturn
+
+def done() -> NoReturn:
+    pass
+
+if False:
+    a = 10
+else:
+    done()
+
+print(a)
+"""
+    assert check(code) == []
+
+
+def test_exit_func() -> None:
+    code = """
+from typing import NoReturn
+from sys import exit
+
+def done():
+    exit()
+
+if False:
+    a = 10
+else:
+    done()
+
+print(a)
+"""
+    assert check(code) == []
+
+
+def test_exit_from_sys_with_alias() -> None:
+    code = """
+import sys as foo
+
+if False:
+    a = 10
+else:
+    foo.exit()
+
+print(a)
+"""
+    assert check(code) == []
+
+
+def test_exit_with_alias() -> None:
+    code = """
+from sys import exit as nope
+
+if False:
+    a = 10
+else:
+    nope()
+
+print(a)
+"""
+    assert check(code) == []

@@ -57,9 +57,7 @@ def monkeypatch_nameutil() -> Iterator[None]:
     prop = "find_qualified_name_for_non_import"
     prev = getattr(sp._NameUtil, prop, None)
     setattr(
-        sp._NameUtil,
-        prop,
-        find_qualified_name_for_non_import,
+        sp._NameUtil, prop, find_qualified_name_for_non_import,
     )
     try:
         yield
@@ -69,20 +67,60 @@ def monkeypatch_nameutil() -> Iterator[None]:
 
 EXIT_NODES = (cst.Raise, cst.Return, cst.Continue, cst.Break)
 
+EXIT_FUNCTIONS = ("sys.exit", "os._exit")
 
-def is_terminal(node: Union[cst.Else, cst.ExceptHandler]) -> bool:
+
+def is_terminal(node: Union[cst.Else, cst.ExceptHandler], scope: sp.Scope) -> bool:
     """
     Return true if the Else or Except node includes any unconditioinal statements which break control out of the current scope.
 
-    Currently: continue, raise, return, break
-    There might be more?
+    Currently this includes:
+        - Statements: continue, raise, return, break
+        - Function calls to builtin exit functions
+        - Function calls to functions with NoReturn type
+        - Function calls to functions which are terminal
     """
 
     for statement in getattr(node.body, "body", []):
         if isinstance(statement, cst.SimpleStatementLine):
             for statement_item in getattr(statement, "body", []):
+                # Check for breaking statements
                 if isinstance(statement_item, EXIT_NODES):
                     return True
+
+                # Check function calls...
+                if isinstance(statement_item, cst.Expr) and isinstance(
+                    statement_item.value, cst.Call
+                ):
+                    # Builtin exit functions
+                    qualified_names = scope.get_qualified_names_for(
+                        statement_item.value.func
+                    )
+                    for qname in qualified_names:
+                        if (
+                            qname.name in EXIT_FUNCTIONS
+                            and qname.source == sp.QualifiedNameSource.IMPORT
+                        ):
+                            return True
+
+                    # Custom exit functions
+                    for assignment in scope.assignments[statement_item.value.func]:
+                        if assignment.node.returns:
+                            return_annotation_names = scope.get_qualified_names_for(
+                                assignment.node.returns.annotation
+                            )
+                            if (
+                                sp.QualifiedName(
+                                    name="typing.NoReturn",
+                                    source=sp.QualifiedNameSource.IMPORT,
+                                )
+                                in return_annotation_names
+                            ):
+                                return True
+
+                        # Terminal function bodies
+                        if is_terminal(assignment.node, assignment.scope):
+                            return True
 
     return False
 
@@ -109,6 +147,10 @@ class BlockScopeVisitor(sp.ScopeVisitor):
         """ Create a new scope for if """
         node.test.visit(self)
 
+        if is_conditional_typing_import(node, self.scope):
+            node.body.visit(self)
+            return False
+
         orelse = node.orelse
 
         terminal_else = False
@@ -117,7 +159,7 @@ class BlockScopeVisitor(sp.ScopeVisitor):
             if isinstance(orelse, cst.If):
                 orelse = orelse.orelse
             elif isinstance(orelse, cst.Else):
-                if is_terminal(orelse):
+                if is_terminal(orelse, self.scope):
                     terminal_else = True
                 break
 
@@ -141,14 +183,14 @@ class BlockScopeVisitor(sp.ScopeVisitor):
             if node.orelse:
                 node.orelse.visit(self)
 
-        # If an "Else" has a bare raise or return, the
-
         return False
 
     def visit_Try(self, node: cst.Try) -> Optional[bool]:
         """ Deal with the complexities of try/except/else/finally """
 
-        all_terminal_handlers = all(is_terminal(handler) for handler in node.handlers)
+        all_terminal_handlers = all(
+            is_terminal(handler, self.scope) for handler in node.handlers
+        )
 
         if all_terminal_handlers:
             # If all except handlers are terminal, assume that anything defined in the body WILL be seen
@@ -191,3 +233,43 @@ class BlockScopeVisitor(sp.ScopeVisitor):
             node.finalbody.visit(self)
 
         return False
+
+
+def is_conditional_typing_import(node: cst.If, scope: sp.LocalScope):
+    """
+    Return true if an if statement was a truth check of typing.TYPE_CHECKING.
+    """
+
+    if node.orelse:
+        return False
+
+    tested = node.test
+    if is_truth_comparison(node.test, scope):
+        tested = node.test.left
+
+    for qname in scope.get_qualified_names_for(tested):
+        if (
+            qname.name == "typing.TYPE_CHECKING"
+            and qname.source == sp.QualifiedNameSource.IMPORT
+        ):
+            return True
+
+    return False
+
+
+def is_truth_comparison(node: cst.CSTNode, scope: sp.Scope):
+    """ Return true if the node is a comparison of the form "x is True" or "x == True" """
+    if not isinstance(node, cst.Comparison):
+        return False
+
+    if len(node.comparisons) != 1:
+        return False
+
+    comp = node.comparisons[0]
+    if isinstance(comp.operator, (cst.Is, cst.Equal)):
+        if scope.get_qualified_names_for(comp.comparator) == {
+            sp.QualifiedName(
+                name="builtins.True", source=sp.QualifiedNameSource.BUILTIN
+            )
+        }:
+            return True
