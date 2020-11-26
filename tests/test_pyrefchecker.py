@@ -11,7 +11,8 @@ else:
     if True:
         return True
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_if() -> None:
@@ -20,7 +21,8 @@ if True:
     a = 1
 print(a)
 """
-    assert check(code) == [RefWarning(line=4, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=4, column=6, reference="a")]
 
 
 def test_try() -> None:
@@ -32,7 +34,8 @@ except Exception:
     pass
 print(a)
 """
-    assert check(code) == [RefWarning(line=7, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=7, column=6, reference="a")]
 
 
 def test_try_finally() -> None:
@@ -47,7 +50,8 @@ finally:
 print(a)
 print(b)
 """
-    assert check(code) == [RefWarning(line=9, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=9, column=6, reference="a")]
 
 
 def test_try_define_in_handler() -> None:
@@ -59,7 +63,8 @@ except IndexError:
     a = 1
 print(a)
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_try_define_in_multiple_handlers() -> None:
@@ -74,7 +79,8 @@ except SyntaxError:
 print(a)
 print(b)
 """
-    assert check(code) == [
+    result = check(code)
+    assert result == [
         RefWarning(line=9, column=6, reference="a"),
         RefWarning(line=10, column=6, reference="b"),
     ]
@@ -93,7 +99,8 @@ else:
     print(a)
 
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 @pytest.mark.parametrize("stmt", ["raise", "return"])
@@ -106,7 +113,8 @@ except Exception:
     {stmt}
 print(a)
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 @pytest.mark.parametrize("stmt", ["raise", "return"])
@@ -121,7 +129,8 @@ except SyntaxError:
     {stmt}
 print(a)
 """
-    assert check(code) == [RefWarning(line=9, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=9, column=6, reference="a")]
 
 
 @pytest.mark.parametrize("stmt", ["raise", "return"])
@@ -133,7 +142,8 @@ else:
     {stmt}
 print(a)
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_import_star() -> None:
@@ -142,7 +152,8 @@ from foo import *
 
 print(yolo)
 """
-    assert check(code) == [ImportStarWarning()]
+    result = check(code)
+    assert result == [ImportStarWarning()]
 
 
 def test_import_star_fake() -> None:
@@ -151,7 +162,8 @@ def test_import_star_fake() -> None:
 a = "import *"
 print(a)
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_string_annotation() -> None:
@@ -161,7 +173,8 @@ A = str
 def wrap_req(func: Set["A"]):
     pass
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_string_annotation_missing() -> None:
@@ -171,7 +184,8 @@ from typing import Set
 def wrap_req(func: Set["A"]):
     pass
 """
-    assert check(code) == [NoLocationRefWarning("A")]
+    result = check(code)
+    assert result == [NoLocationRefWarning("A")]
 
 
 def test_for() -> None:
@@ -181,7 +195,8 @@ for _ in range(0):
 
 print(a)
 """
-    assert check(code) == [RefWarning(line=5, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=5, column=6, reference="a")]
 
 
 def test_for_else() -> None:
@@ -193,7 +208,8 @@ else:
 
 print(a)
 """
-    assert check(code) == [RefWarning(line=7, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=7, column=6, reference="a")]
 
 
 def test_ignore_comment() -> None:
@@ -203,7 +219,8 @@ if True:
 
 print(a) # ref: ignore
 """
-    assert not check(code)
+    result = check(code)
+    assert not result
 
 
 def test_ignore_comment_fake() -> None:
@@ -213,7 +230,8 @@ print(a, ''' # ref: ignore
 
 ''')
 """
-    assert check(code) == [RefWarning(line=3, column=6, reference="a")]
+    result = check(code)
+    assert result == [RefWarning(line=3, column=6, reference="a")]
 
 
 def test_monkeypatch() -> None:
@@ -222,8 +240,10 @@ for a in []:
     a = lambda: None
     a()
 """
-    # This test fails when the nameutil monkeypatch is not used
-    assert not check(code)
+    # This test fails
+    #   result = check(code) when the nameutil monkeypatch is not used
+    result = check(code)
+    assert not result
 
 
 def test_type_complaints() -> None:
@@ -251,8 +271,9 @@ d: Good4
 d: Bad1
 e: Bad2
 """
-    print(check(code))
-    assert check(code) == [
+
+    result = check(code)
+    assert result == [
         RefWarning(line=22, column=3, reference="Bad1"),
         RefWarning(line=23, column=3, reference="Bad2"),
     ]
@@ -272,10 +293,41 @@ else:
 
 print(a)
 """
-    assert check(code) == []
+    result = check(code)
+    assert not result
 
 
-def test_exit_func() -> None:
+def test_exit_from_sys_with_alias() -> None:
+    code = """
+import sys as foo
+
+if False:
+    a = 10
+else:
+    foo.exit()
+
+print(a)
+"""
+    result = check(code)
+    assert not result
+
+
+def test_exit_with_alias() -> None:
+    code = """
+from sys import exit as nope
+
+if False:
+    a = 10
+else:
+    nope()
+
+print(a)
+"""
+    result = check(code)
+    assert not result
+
+
+def test_exit_in_called_function() -> None:
     code = """
 from typing import NoReturn
 from sys import exit
@@ -290,32 +342,24 @@ else:
 
 print(a)
 """
-    assert check(code) == []
+    result = check(code)
+    assert not result
 
 
-def test_exit_from_sys_with_alias() -> None:
+def test_os_exit_in_called_function() -> None:
     code = """
-import sys as foo
+from typing import NoReturn
+import os
+
+def done():
+    os._exit()
 
 if False:
     a = 10
 else:
-    foo.exit()
+    done()
 
 print(a)
 """
-    assert check(code) == []
-
-
-def test_exit_with_alias() -> None:
-    code = """
-from sys import exit as nope
-
-if False:
-    a = 10
-else:
-    nope()
-
-print(a)
-"""
-    assert check(code) == []
+    result = check(code)
+    assert not result

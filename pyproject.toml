@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyrefchecker"
-version = "0.3.0"
+version = "0.3.1"
 description = "Check Python files for possibly undefined references"
 maintainers = ["Joseph Atkins-Turkish <jatkins-turkish@brex.com>"]
 authors = ["Joseph Atkins-Turkish <jatkins-turkish@brex.com>"]

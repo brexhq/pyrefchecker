@@ -70,57 +70,66 @@ EXIT_NODES = (cst.Raise, cst.Return, cst.Continue, cst.Break)
 EXIT_FUNCTIONS = ("sys.exit", "os._exit")
 
 
-def is_terminal(node: Union[cst.Else, cst.ExceptHandler], scope: sp.Scope) -> bool:
+def is_exit_expression(node: cst.CSTNode, scope: sp.Scope) -> bool:
     """
-    Return true if the Else or Except node includes any unconditioinal statements which break control out of the current scope.
+    Return true if the node is a function call which unconditionally causes the application to exit.
+
+    - Function calls to builtin exit functions
+    - Function calls to functions with NoReturn type
+    - Function calls to functions which are terminal
+    """
+
+    if isinstance(node, cst.Expr) and isinstance(node.value, cst.Call):
+        # Builtin exit functions
+        qualified_names = scope.get_qualified_names_for(node.value.func)
+        for qname in qualified_names:
+            if (
+                qname.name in EXIT_FUNCTIONS
+                and qname.source == sp.QualifiedNameSource.IMPORT
+            ):
+                return True
+
+        # Custom exit functions
+        for assignment in scope.assignments[node.value.func]:
+            if assignment.node.returns:
+                return_annotation_names = scope.get_qualified_names_for(
+                    assignment.node.returns.annotation
+                )
+                if (
+                    sp.QualifiedName(
+                        name="typing.NoReturn", source=sp.QualifiedNameSource.IMPORT,
+                    )
+                    in return_annotation_names
+                ):
+                    return True
+
+            # Terminal function bodies
+            for statement in getattr(assignment.node.body, "body", []):
+                if isinstance(statement, cst.SimpleStatementLine):
+                    for statement_item in getattr(statement, "body", []):
+                        if is_exit_expression(statement_item, assignment.scope):
+                            return True
+    return False
+
+
+def is_terminal(node: cst.CSTNode, scope: sp.Scope) -> bool:
+    """
+    Return true if a node's body includes any unconditioinal statements which break control out of the current scope.
 
     Currently this includes:
         - Statements: continue, raise, return, break
-        - Function calls to builtin exit functions
-        - Function calls to functions with NoReturn type
-        - Function calls to functions which are terminal
+        - Anything which causes the application to quit
+
     """
 
     for statement in getattr(node.body, "body", []):
         if isinstance(statement, cst.SimpleStatementLine):
             for statement_item in getattr(statement, "body", []):
-                # Check for breaking statements
                 if isinstance(statement_item, EXIT_NODES):
                     return True
 
-                # Check function calls...
-                if isinstance(statement_item, cst.Expr) and isinstance(
-                    statement_item.value, cst.Call
-                ):
-                    # Builtin exit functions
-                    qualified_names = scope.get_qualified_names_for(
-                        statement_item.value.func
-                    )
-                    for qname in qualified_names:
-                        if (
-                            qname.name in EXIT_FUNCTIONS
-                            and qname.source == sp.QualifiedNameSource.IMPORT
-                        ):
-                            return True
-
-                    # Custom exit functions
-                    for assignment in scope.assignments[statement_item.value.func]:
-                        if assignment.node.returns:
-                            return_annotation_names = scope.get_qualified_names_for(
-                                assignment.node.returns.annotation
-                            )
-                            if (
-                                sp.QualifiedName(
-                                    name="typing.NoReturn",
-                                    source=sp.QualifiedNameSource.IMPORT,
-                                )
-                                in return_annotation_names
-                            ):
-                                return True
-
-                        # Terminal function bodies
-                        if is_terminal(assignment.node, assignment.scope):
-                            return True
+                if is_exit_expression(statement_item, scope):
+                    return True
 
     return False
 
