@@ -5,6 +5,18 @@ EXIT_NODES = (cst.Raise, cst.Return, cst.Continue, cst.Break)
 
 EXIT_FUNCTIONS = ("sys.exit", "os._exit")
 
+QualifiedNoReturn = sp.QualifiedName(
+    name="typing.NoReturn", source=sp.QualifiedNameSource.IMPORT,
+)
+
+QualifiedTypeCheckingFlag = sp.QualifiedName(
+    name="typing.TYPE_CHECKING", source=sp.QualifiedNameSource.IMPORT
+)
+
+QualifiedTrue = sp.QualifiedName(
+    name="builtins.True", source=sp.QualifiedNameSource.BUILTIN
+)
+
 
 def is_exit_expression(node: cst.CSTNode, scope: sp.Scope) -> bool:
     """
@@ -35,13 +47,7 @@ def is_exit_expression(node: cst.CSTNode, scope: sp.Scope) -> bool:
                 return_annotation_names = scope.get_qualified_names_for(
                     assignment.node.returns.annotation
                 )
-                if (
-                    sp.QualifiedName(
-                        name="typing.NoReturn",
-                        source=sp.QualifiedNameSource.IMPORT,
-                    )
-                    in return_annotation_names
-                ):
+                if return_annotation_names == {QualifiedNoReturn}:
                     return True
 
             # Terminal function bodies
@@ -58,9 +64,8 @@ def is_terminal(node: cst.CSTNode, scope: sp.Scope) -> bool:
     Return true if a node's body includes any unconditioinal statements which break control out of the current scope.
 
     Currently this includes:
-        - Statements: continue, raise, return, break
+        - Breaking statements: continue, raise, return, break
         - Anything which causes the application to quit
-
     """
 
     for statement in getattr(getattr(node, "body", None), "body", []):
@@ -88,14 +93,7 @@ def is_conditional_typing_import(node: cst.If, scope: sp.Scope) -> bool:
     if isinstance(node.test, cst.Comparison) and is_truth_comparison(node.test, scope):
         tested = node.test.left
 
-    for qname in scope.get_qualified_names_for(tested):
-        if (
-            qname.name == "typing.TYPE_CHECKING"
-            and qname.source == sp.QualifiedNameSource.IMPORT
-        ):
-            return True
-
-    return False
+    return scope.get_qualified_names_for(tested) == {QualifiedTypeCheckingFlag}
 
 
 def is_truth_comparison(node: cst.Comparison, scope: sp.Scope) -> bool:
@@ -107,6 +105,4 @@ def is_truth_comparison(node: cst.Comparison, scope: sp.Scope) -> bool:
     comp = node.comparisons[0]
     return isinstance(
         comp.operator, (cst.Is, cst.Equal)
-    ) and scope.get_qualified_names_for(comp.comparator) == {
-        sp.QualifiedName(name="builtins.True", source=sp.QualifiedNameSource.BUILTIN)
-    }
+    ) and scope.get_qualified_names_for(comp.comparator) == {QualifiedTrue}
