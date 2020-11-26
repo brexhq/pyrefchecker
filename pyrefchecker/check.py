@@ -3,7 +3,7 @@ from typing import Container, Dict, List, Set, cast
 
 import libcst as cst
 import libcst.metadata as meta
-from libcst.metadata import ParentNodeProvider
+
 from .block_scope_provider import BlockScopeProvider, monkeypatch_nameutil
 from .ignore_comment_provider import IgnoreCommentProvider
 from .import_star_provider import ImportStarProvider
@@ -58,7 +58,6 @@ class Metadata:
     ranges: _Ranges
     import_star: bool
     ignored_lines: Container[int]
-    parents: Dict[cst.CSTNode, cst.CSTNode]
 
 
 def get_metadata(code: str) -> Metadata:
@@ -71,13 +70,15 @@ def get_metadata(code: str) -> Metadata:
         meta.PositionProvider,
         ImportStarProvider,
         IgnoreCommentProvider,
-        ParentNodeProvider,
     ]
     metadata = wrapper.resolve_many(providers)  # type: ignore
 
     scopes = cast(Set[meta.Scope], set(metadata[BlockScopeProvider].values()))
 
-    ranges = cast(_Ranges, metadata[meta.PositionProvider],)
+    ranges = cast(
+        _Ranges,
+        metadata[meta.PositionProvider],
+    )
 
     ignored_lines = cast(Set[int], set(metadata[IgnoreCommentProvider].values()))
 
@@ -86,7 +87,6 @@ def get_metadata(code: str) -> Metadata:
         ranges=ranges,
         import_star=len(metadata[ImportStarProvider]) > 0,
         ignored_lines=ignored_lines,
-        parents=metadata[ParentNodeProvider],
     )
 
 
@@ -114,8 +114,6 @@ def check(code: str) -> List[BaseWarning]:
                         warnings.append(NoLocationRefWarning(reference=str(node.value)))
                     else:
                         if location.line not in metadata.ignored_lines:
-                            if isinstance(metadata.parents[node], cst.Annotation):
-                                pass
                             warnings.append(
                                 RefWarning(
                                     line=location.line,

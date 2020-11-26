@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Iterable, Optional, Set, Union, Collection
+from typing import Collection, Iterable, Optional, Set, Union
 
 
 def find_files(
