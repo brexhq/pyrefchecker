@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "pyrefchecker"
-version = "0.3.2"
+version = "1.0.0"
 description = "Check Python files for possibly undefined references"
 maintainers = ["Joseph Atkins-Turkish <jatkins-turkish@brex.com>"]
 authors = ["Joseph Atkins-Turkish <jatkins-turkish@brex.com>"]
-license = "Proprietary"
+license = "ISC"
 readme = "README.md"
 include = ["pyrefchecker/py.typed"]
 
